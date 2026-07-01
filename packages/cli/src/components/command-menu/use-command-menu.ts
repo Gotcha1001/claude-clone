@@ -1,106 +1,9 @@
-// import { useRef, useState, useMemo, type RefObject } from "react";
-// import type { ScrollBoxRenderable } from "@opentui/core";
-// import { useKeyboard } from "@opentui/react";
-// import { getFilteredCommands } from "./filter-commands";
-// import type { Command } from "./types";
-
-// type UseCommandMenuReturn = {
-//   showCommandMenu: boolean;
-//   commandQuery: string;
-//   selectedIndex: number;
-//   scrollRef: RefObject<ScrollBoxRenderable | null>;
-//   handleContentChange: (text: string) => void;
-//   resolveCommand: (index: number) => Command | undefined;
-//   setSelectedIndex: (index: number) => void;
-// };
-
-// export function useCommandMenu(): UseCommandMenuReturn {
-//   const [textValue, setTextValue] = useState("");
-//   const [selectedIndex, setSelectedIndex] = useState(0);
-//   const scrollRef = useRef<ScrollBoxRenderable>(null);
-
-//   // Derive these directly from textValue on every render, so there's no
-//   // one-render lag between typing "/" and the menu/query updating.
-//   const prefix = textValue.startsWith("/") ? textValue.slice(1) : null;
-//   const showCommandMenu = prefix !== null && !prefix.includes(" ");
-//   const commandQuery = showCommandMenu ? (prefix as string) : "";
-
-//   const filteredCommands = useMemo(
-//     () => getFilteredCommands(commandQuery),
-//     [commandQuery],
-//   );
-
-//   const handleContentChange = (text: string) => {
-//     setTextValue(text);
-//     setSelectedIndex(0);
-
-//     // Jump back to the top of the list when the user types a new character
-//     const scrollbox = scrollRef.current;
-//     if (scrollbox) {
-//       scrollbox.scrollTo(0);
-//     }
-//   };
-
-//   // Resolve a command at a specific index (returns the command, caller handles execution)
-//   const resolveCommand = (index: number): Command | undefined => {
-//     return filteredCommands[index];
-//   };
-
-//   // Arrow keys move selection; the list follows along when the highlight goes off-screen
-
-//   useKeyboard((key) => {
-//     if (!showCommandMenu) return;
-//     if (key.name === "escape") {
-//       key.preventDefault();
-//       setTextValue("");
-//     } else if (key.name === "up") {
-//       key.preventDefault();
-//       setSelectedIndex((i: number) => {
-//         const newIndex = Math.max(0, i - 1);
-
-//         // Keep the highlighted item visible when arrowing past the edge
-//         const sb = scrollRef.current;
-//         if (sb && newIndex < sb.scrollTop) {
-//           sb.scrollTo(newIndex);
-//         }
-//         return newIndex;
-//       });
-//     } else if (key.name === "down") {
-//       key.preventDefault();
-//       setSelectedIndex((i: number) => {
-//         if (filteredCommands.length === 0) {
-//           return 0;
-//         }
-
-//         const newIndex = Math.min(filteredCommands.length - 1, i + 1);
-//         const sb = scrollRef.current;
-//         if (sb) {
-//           const viewportHeight = sb.viewport.height;
-//           const visibleEnd = sb.scrollTop + viewportHeight - 1;
-//           if (newIndex > visibleEnd) {
-//             sb.scrollTo(newIndex - viewportHeight + 1);
-//           }
-//         }
-//         return newIndex;
-//       });
-//     }
-//   });
-//   return {
-//     showCommandMenu,
-//     commandQuery,
-//     selectedIndex,
-//     scrollRef,
-//     handleContentChange,
-//     resolveCommand,
-//     setSelectedIndex,
-//   };
-// }
-
 import { useRef, useState, useMemo, useEffect, type RefObject } from "react";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { getFilteredCommands } from "./filter-commands";
 import type { Command } from "./types";
+import { useKeyboardLayer } from "../../providers/keyboard-layer";
 
 type UseCommandMenuReturn = {
   showCommandMenu: boolean;
@@ -116,9 +19,8 @@ export function useCommandMenu(): UseCommandMenuReturn {
   const [textValue, setTextValue] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollRef = useRef<ScrollBoxRenderable>(null);
+  const { push, pop, isTopLayer } = useKeyboardLayer();
 
-  // Derive these directly from textValue on every render, so there's no
-  // one-render lag between typing "/" and the menu/query updating.
   const prefix = textValue.startsWith("/") ? textValue.slice(1) : null;
   const showCommandMenu = prefix !== null && !prefix.includes(" ");
   const commandQuery = showCommandMenu ? (prefix as string) : "";
@@ -136,20 +38,31 @@ export function useCommandMenu(): UseCommandMenuReturn {
     }
   }, [showCommandMenu, filteredCommands]);
 
+  // Register a "command" layer so ctrl+c closes the menu instead of
+  // exiting the whole app while it's open.
+  useEffect(() => {
+    if (!showCommandMenu) return;
+
+    push("command", () => {
+      setTextValue("");
+      return true; // tell the ctrl+c chain "handled, stop here"
+    });
+
+    return () => pop("command");
+  }, [showCommandMenu, push, pop]);
+
   const handleContentChange = (text: string) => {
     setTextValue(text);
     setSelectedIndex(0);
   };
 
-  // Resolve a command at a specific index (returns the command, caller handles execution)
   const resolveCommand = (index: number): Command | undefined => {
     return filteredCommands[index];
   };
 
-  // Arrow keys move selection; the list follows along when the highlight goes off-screen
-
   useKeyboard((key) => {
     if (!showCommandMenu) return;
+
     if (key.name === "escape") {
       key.preventDefault();
       setTextValue("");
@@ -157,8 +70,6 @@ export function useCommandMenu(): UseCommandMenuReturn {
       key.preventDefault();
       setSelectedIndex((i: number) => {
         const newIndex = Math.max(0, i - 1);
-
-        // Keep the highlighted item visible when arrowing past the edge
         const sb = scrollRef.current;
         if (sb && newIndex < sb.scrollTop) {
           sb.scrollTo(newIndex);
@@ -171,7 +82,6 @@ export function useCommandMenu(): UseCommandMenuReturn {
         if (filteredCommands.length === 0) {
           return 0;
         }
-
         const newIndex = Math.min(filteredCommands.length - 1, i + 1);
         const sb = scrollRef.current;
         if (sb) {
@@ -185,6 +95,7 @@ export function useCommandMenu(): UseCommandMenuReturn {
       });
     }
   });
+
   return {
     showCommandMenu,
     commandQuery,
