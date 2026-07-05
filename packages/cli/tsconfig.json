@@ -1,7 +1,17 @@
+// {
+//   "extends": "../.../tsconfig.base.json",
+//   "compilerOptions": {
+//     "jsx": "react-jsx",
+//     "jsxImportSource": "@opentui/react"
+//   }
+// }
+
 {
   "extends": "../.../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@opentui/react"
+    "jsxImportSource": "@opentui/react",
+    "moduleResolution": "bundler",
+    "module": "ESNext"
   }
 }
