@@ -13,6 +13,14 @@ type SupportedChatModelDefinition = {
 
 export const SUPPORTED_CHAT_MODELS = [
   {
+    id: "claude-sonnet-4-7",
+    provider: "anthropic",
+    pricing: {
+      inputUsdPerMillionTokens: 3,
+      outputUsdPerMillionTokens: 15,
+    },
+  },
+  {
     id: "claude-sonnet-4-6",
     provider: "anthropic",
     pricing: {
@@ -29,7 +37,7 @@ export const SUPPORTED_CHAT_MODELS = [
     },
   },
   {
-    id: "claud-opus-4-6",
+    id: "claude-opus-4-6",
     provider: "anthropic",
     pricing: {
       inputUsdPerMillionTokens: 5,
@@ -69,4 +77,4 @@ export function findSupportedChatModel(modelId: string) {
   return SUPPORTED_CHAT_MODELS.find((model) => model.id === modelId);
 }
 
-export const DEFAULT_CHAT_MODEL_ID: SupportedChatModelId = "claud-opus-4-6";
+export const DEFAULT_CHAT_MODEL_ID: SupportedChatModelId = "claude-opus-4-6";
