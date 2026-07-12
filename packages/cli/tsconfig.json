@@ -1,5 +1,5 @@
 // {
-//   "extends": "../.../tsconfig.base.json",
+//   "extends": "../../tsconfig.base.json",
 //   "compilerOptions": {
 //     "jsx": "react-jsx",
 //     "jsxImportSource": "@opentui/react"
@@ -7,7 +7,7 @@
 // }
 
 {
-  "extends": "../.../tsconfig.base.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "@opentui/react",
