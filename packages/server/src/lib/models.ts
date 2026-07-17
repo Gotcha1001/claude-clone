@@ -8,6 +8,7 @@ import {
   type SupportedProvider,
 } from "@nightcode/shared";
 import type { LanguageModel } from "ai";
+import type { ProviderOptions } from "@ai-sdk/provider-utils";
 
 type AnthropicModelId = Extract<
   SupportedChatModel,
@@ -20,7 +21,40 @@ export type ResolvedModel = {
   model: LanguageModel;
   provider: SupportedProvider;
   modelId: SupportedChatModelId;
+  providerOptions?: ProviderOptions;
 };
+
+const ANTHROPIC_PROVIDER_OPTIONS: Partial<
+  Record<AnthropicModelId, ProviderOptions>
+> = {
+  "claude-opus-4-6": {
+    anthropic: {
+      thinking: {
+        type: "enabled",
+        budgetTokens: 10000,
+      },
+    },
+  },
+  "claude-sonnet-4-6": {
+    anthropic: {
+      thinking: {
+        type: "enabled",
+        budgetTokens: 10000,
+      },
+    },
+  },
+};
+
+const OPENAI_PROVIDER_OPTIONS: Partial<Record<OpenAIModelId, ProviderOptions>> =
+  {
+    "gpt-5.4": {
+      openai: {
+        thinking: {
+          reasoningSummary: "detailed",
+        },
+      },
+    },
+  };
 
 function assertUnsupportedProvider(provider: never): never {
   throw new Error(`Unsupported provider: ${provider}`);
@@ -31,6 +65,7 @@ function resolveAnthropicModel(modelId: AnthropicModelId): ResolvedModel {
     model: anthropic(modelId),
     provider: "anthropic",
     modelId,
+    providerOptions: ANTHROPIC_PROVIDER_OPTIONS[modelId],
   };
 }
 
@@ -39,6 +74,7 @@ function resolvedOpenAIModel(modelId: OpenAIModelId): ResolvedModel {
     model: openai(modelId),
     provider: "openai",
     modelId,
+    providerOptions: OPENAI_PROVIDER_OPTIONS[modelId],
   };
 }
 
