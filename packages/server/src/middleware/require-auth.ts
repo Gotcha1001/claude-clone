@@ -16,8 +16,9 @@ export const requireAuth = createMiddleware<AuthenticatedEnv>(
       }
 
       c.set("userId", auth.userId);
+      await next(); // <-- this was missing
     } catch {
-      return c.json({ error: "Unauthorized.Run /login to continue." }, 401);
+      return c.json({ error: "Unauthorized. Run /login to continue." }, 401);
     }
   },
 );
