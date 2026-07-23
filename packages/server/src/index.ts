@@ -29,6 +29,31 @@ app.get("/debug-sentry", () => {
   throw new Error("My first Sentry error!");
 });
 
+// app.onError((error, c) => {
+//   if (error instanceof HTTPException) {
+//     Sentry.logger.warn("Handled HTTP error", {
+//       status: error.status,
+//       message: error.message || "Request failed",
+//       path: c.req.path,
+//       method: c.req.method,
+//     });
+//     return c.json(
+//       {
+//         error: error.message || "Request failed",
+//       },
+//       error.status,
+//     );
+//   }
+
+//   Sentry.logger.error("Unhandled Server error", {
+//     path: c.req.path,
+//     method: c.req.method,
+//     message: error instanceof Error ? error.message : "Unknown error",
+//   });
+
+//   return c.json({ error: "Internal server error" }, 500);
+// });
+
 app.onError((error, c) => {
   if (error instanceof HTTPException) {
     Sentry.logger.warn("Handled HTTP error", {
@@ -45,13 +70,24 @@ app.onError((error, c) => {
     );
   }
 
-  Sentry.logger.error("Unhandled Server error", {
-    path: c.req.path,
-    method: c.req.method,
-    message: error instanceof Error ? error.message : "Unknown error",
+  // Send the real exception object to Sentry (not just a text summary) so you get a stack trace
+  Sentry.captureException(error, {
+    tags: { path: c.req.path, method: c.req.method },
   });
 
-  return c.json({ error: "Internal server error" }, 500);
+  // Full stack trace in Railway's own logs too
+  console.error("Unhandled server error:", error);
+
+  // TEMPORARY: return the real error to the client so you can see it without digging through Sentry/Railway.
+  // Remove this before shipping to real users - leaking stack traces/messages to clients is a security risk.
+  return c.json(
+    {
+      error: "Internal server error",
+      debug_message: error instanceof Error ? error.message : String(error),
+      debug_stack: error instanceof Error ? error.stack : undefined,
+    },
+    500,
+  );
 });
 
 app.use("/sessions/*", requireAuth);
