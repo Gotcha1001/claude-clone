@@ -2,10 +2,12 @@ import { Hono } from "hono";
 // import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { findSupportedChatModel } from "@nightcode/shared";
+import { isSupportedChatModel } from "../lib/models";
 import { db } from "@nightcode/database/client";
 import { Role, Mode, MessageStatus } from "@nightcode/database/enums";
 import * as Sentry from "@sentry/hono/bun";
+import type { AuthenticatedEnv } from "../middleware/require-auth";
+import { requireCreditsBalance } from "../middleware/require-credits-balance";
 
 const createSessionSchema = z.object({
   title: z.string(),
@@ -15,9 +17,7 @@ const createSessionSchema = z.object({
       role: z.enum(Role),
       content: z.string(),
       mode: z.enum(Mode),
-      model: z
-        .string()
-        .refine((id) => !!findSupportedChatModel(id), "Unsupported model"),
+      model: z.string().refine(isSupportedChatModel, "Unsupported model"),
     })
     .optional(),
 });
@@ -36,9 +36,11 @@ const createSessionValidator = zValidator(
   },
 );
 
-const app = new Hono()
+const app = new Hono<AuthenticatedEnv>()
   .get("/", async (c) => {
+    const userId = c.get("userId");
     const sessions = await db.session.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -59,9 +61,10 @@ const app = new Hono()
     // Mock: Uncomment to simulate session loading error
     // throw new HTTPException(500, {message: "Mock error: session loading failed"})
     const id = c.req.param("id");
+    const userId = c.get("userId");
 
     const session = await db.session.findUnique({
-      where: { id },
+      where: { id, userId },
       include: {
         messages: { orderBy: { createdAt: "asc" } },
       },
@@ -82,18 +85,18 @@ const app = new Hono()
     return c.json(session);
   })
 
-  .post("/", createSessionValidator, async (c) => {
+  .post("/", requireCreditsBalance, createSessionValidator, async (c) => {
     // MOCK: Uncomment to simulate slow session loading
     // await new Promise((r) => setTimeout(r,5000))
     // Mock: Uncomment to simulate session loading error
     // throw new HTTPException(500, {message: "Mock error: session loading failed"})
-
+    const userId = c.get("userId");
     const { initialMessage, ...data } = c.req.valid("json");
 
     const session = await db.session.create({
       data: {
         ...data,
-        userId: "mock-user",
+        userId: userId,
         ...(initialMessage && {
           messages: {
             create: {

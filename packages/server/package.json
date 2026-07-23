@@ -13,9 +13,11 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.9",
     "@ai-sdk/openai": "^4.0.8",
+    "@clerk/backend": "^3.11.7",
     "@hono/zod-validator": "^0.8.0",
     "@nightcode/database": "workspace:*",
     "@nightcode/shared": "workspace:*",
+    "@polar-sh/sdk": "^0.49.0",
     "@sentry/bun": "^10.64.0",
     "@sentry/hono": "^10.64.0",
     "ai": "^7.0.17",
